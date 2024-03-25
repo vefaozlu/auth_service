@@ -2,11 +2,29 @@ import Joi from "joi";
 import getEpoch from "./utils/epoch.js";
 import token from "./utils/token.js";
 import client from "../redis/config.js";
+import { startCron, stopCron } from "./utils/cron.js";
 
 export default class Controller {
   static async start(req, res) {
     try {
-      
+      const now = await getEpoch({ seconds: true });
+
+      const refreshToken = token();
+
+      await client.hSet("server", {
+        issued: now,
+        expires: now + 600,
+        refresh_token: refreshToken,
+      });
+
+      await client.set("issued_time", now);
+      await client.set("refresh_token", refreshToken);
+
+      console.log("Starting cron job");
+
+      await startCron();
+
+      return res.status(200).json({ message: "Cron job started" });
     } catch (error) {
       console.log(error);
       return res.status(501).json({ message: "Internal server error" });
@@ -19,7 +37,7 @@ export default class Controller {
 
       const refreshToken = token();
 
-      await client.hSet("response", {
+      await client.hSet("server", {
         issued: now,
         expires: now + 600,
         refresh_token: refreshToken,
@@ -49,7 +67,7 @@ export default class Controller {
       }
 
       const now = await getEpoch({ seconds: true });
-      const response = await client.hGetAll("response");
+      const response = await client.hGetAll("server");
 
       if (now > response.expires || now < response.issued + 570) {
         return res.status(401).json({ message: "Unauthorized" });
@@ -61,7 +79,7 @@ export default class Controller {
 
       const refreshToken = token();
 
-      await client.hSet("response", {
+      await client.hSet("server", {
         issued: now,
         expires: now + 600,
         refresh_token: refreshToken,

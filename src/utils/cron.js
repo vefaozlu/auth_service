@@ -1,9 +1,9 @@
 import { exec } from "child_process";
 import { promisify } from "util";
 
-export async function startCron() {
-  const execPromise = promisify(exec);
+const execPromise = promisify(exec);
 
+export async function startCron() {
   const { stdout, stderr } = await execPromise("$(pwd)/scripts/new_cron.sh");
 
   if (stderr) {
@@ -17,8 +17,6 @@ export async function startCron() {
 }
 
 export async function stopCron() {
-  const execPromise = promisify(exec);
-
   const { stdout, stderr } = await execPromise("$(pwd)/scripts/delete_cron.sh");
 
   if (stderr) {
