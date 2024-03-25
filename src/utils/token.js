@@ -1,6 +1,6 @@
 export default function token() {
   const rand = function () {
-    return Math.random().toString(36);
+    return Math.random().toString(36).substr(2);
   };
 
   const randStr = function () {
