@@ -4,6 +4,15 @@ import token from "./utils/token.js";
 import client from "../redis/config.js";
 
 export default class Controller {
+  static async start(req, res) {
+    try {
+      
+    } catch (error) {
+      console.log(error);
+      return res.status(501).json({ message: "Internal server error" });
+    }
+  }
+
   static async token(req, res) {
     try {
       const now = await getEpoch({ seconds: true });
