@@ -2,37 +2,42 @@ import Joi from "joi";
 import getEpoch from "./utils/epoch.js";
 import token from "./utils/token.js";
 import client from "../redis/config.js";
-import { startCron, stopCron } from "./utils/cron.js";
 
 export default class Controller {
-  static async start(req, res) {
+  static async token(req, res) {
     try {
-      const now = await getEpoch({ seconds: true });
+      if (!req.body.grant_type) {
+        return res.status(400).json({ message: "grant_type is required" });
+      }
 
-      const refreshToken = token();
+      if (req.body.grant_type === "refresh_token")
+        return this.refresh(req, res);
 
-      await client.hSet("server", {
-        issued: now,
-        expires: now + 600,
-        refresh_token: refreshToken,
-      });
+      if (req.body.grant_type === "access_token") return this.token(req, res);
 
-      await client.set("issued_time", now);
-      await client.set("refresh_token", refreshToken);
-
-      console.log("Starting cron job");
-
-      await startCron();
-
-      return res.status(200).json({ message: "Cron job started" });
+      return res.status(400).json({ message: "Invalid grant_type" });
     } catch (error) {
       console.log(error);
       return res.status(501).json({ message: "Internal server error" });
     }
   }
 
-  static async token(req, res) {
+  token = async (req, res) => {
     try {
+      const schema = Joi.object({
+        grant_type: Joi.string().required(),
+        code: Joi.string().required(),
+        redirect_uri: Joi.string().required(),
+        client_id: Joi.string().required(),
+        client_secret: Joi.string().required(),
+      });
+
+      const { error, value } = schema.validate(req.body);
+
+      if (error) {
+        return res.status(400).json({ message: error.details[0].message });
+      }
+
       const now = await getEpoch({ seconds: true });
 
       const refreshToken = token();
@@ -44,23 +49,27 @@ export default class Controller {
       });
 
       return res.status(200).json({
-        expires_in: 600,
-        expires: now + 600,
+        expires: 600,
+        token_type: "Bearer",
+        access_token: token(),
         refresh_token: refreshToken,
       });
     } catch (error) {
       console.log(error);
       return res.status(501).json({ message: "Internal server error" });
     }
-  }
+  };
 
-  static async refresh(req, res) {
+  refresh = async (req, res) => {
     try {
       const schema = Joi.object({
+        grant_type: Joi.string().required(),
         refresh_token: Joi.string().required(),
+        client_id: Joi.string().required(),
+        client_secret: Joi.string().required(),
       });
 
-      const { error } = schema.validate(req.body);
+      const { error, value } = schema.validate(req.body);
 
       if (error) {
         return res.status(400).json({ message: error.details[0].message });
@@ -70,7 +79,10 @@ export default class Controller {
       const response = await client.hGetAll("server");
 
       if (now > response.expires || now < response.issued + 570) {
-        return res.status(401).json({ message: "Unauthorized" });
+        return res.status(401).json({
+          message:
+            "Request should be made after 570 seconds from previous request.",
+        });
       }
 
       if (req.body.refresh_token !== response.refresh_token) {
@@ -86,13 +98,14 @@ export default class Controller {
       });
 
       return res.status(200).json({
-        expires_in: 600,
-        expires: now + 600,
+        expires: 600,
+        token_type: "Bearer",
+        access_token: token(),
         refresh_token: refreshToken,
       });
     } catch (error) {
       console.log(error);
       return res.status(501).json({ message: "Internal server error" });
     }
-  }
+  };
 }
