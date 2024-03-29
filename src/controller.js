@@ -13,7 +13,7 @@ export default class Controller {
 
       if (req.body.grant_type === "refresh_token") return refresh(req, res);
 
-      if (req.body.grant_type === "access_token") return access(req, res);
+      if (req.body.grant_type === "authorization_code") return access(req, res);
 
       return res.status(400).json({ message: "Invalid grant_type" });
     } catch (error) {
