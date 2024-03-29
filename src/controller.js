@@ -50,7 +50,7 @@ async function access(req, res) {
     });
 
     return res.status(200).json({
-      expires: 600,
+      expires: "600",
       token_type: "Bearer",
       access_token: token(),
       refresh_token: refreshToken,
@@ -99,7 +99,7 @@ async function refresh(req, res) {
     });
 
     return res.status(200).json({
-      expires: 600,
+      expires: "600",
       token_type: "Bearer",
       access_token: token(),
       refresh_token: refreshToken,
