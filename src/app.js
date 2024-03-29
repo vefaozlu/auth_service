@@ -7,8 +7,8 @@ async function main() {
   await client.connect();
   console.log("Connected to the client");
 
-  server.listen(7000, () => {
-    console.log("Server on port 7000");
+  server.listen(7001, () => {
+    console.log("Server on port 7001");
   });
 }
 
